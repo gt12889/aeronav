@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  vision-service:
+    build: .
+    ports:
+      - "8766:8766"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - MODEL_SIZE=n
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./models:/app/models  # For caching downloaded models
+    restart: unless-stopped
+

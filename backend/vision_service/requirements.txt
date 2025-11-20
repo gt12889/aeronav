@@ -1,0 +1,30 @@
+# Vision Service Requirements
+# CUDA-enabled packages for GPU acceleration
+
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+python-multipart==0.0.6
+numpy==1.24.3
+opencv-python-headless==4.8.1.78
+Pillow==10.1.0
+
+# CUDA-enabled ML frameworks
+torch>=2.1.0  # PyTorch with CUDA support
+torchvision>=0.16.0
+
+# Computer Vision
+opencv-contrib-python-headless==4.8.1.78
+mediapipe==0.10.7
+
+# Object Detection
+ultralytics==8.1.0  # YOLO v8
+
+# GPU acceleration
+cupy-cuda12x>=12.0.0  # CUDA arrays (adjust CUDA version as needed)
+
+# Utilities
+pydantic==2.5.0
+python-dotenv==1.0.0
+

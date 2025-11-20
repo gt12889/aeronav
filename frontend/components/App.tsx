@@ -24,6 +24,7 @@ import {
   Waves,
   Users,
   Box,
+  Camera,
 } from "lucide-react";
 import { useAudioAnalyzer } from "../hooks/useAudioAnalyzer.js";
 import { usePerformanceProfiler } from "../hooks/usePerformanceProfiler.js";
@@ -40,7 +41,12 @@ import { AugmentationPanel } from "./AugmentationPanel.js";
 import { MultiAgentDashboard } from "./MultiAgentDashboard.js";
 import { RLBackendPanel } from "./RLBackendPanel.js";
 import { ModelViewer } from "./ModelViewer.js";
+import { WebcamViewer } from "./WebcamViewer.js";
+import { VisionControlPanel, type VisionControlConfig, type ControlScheme } from "./VisionControlPanel.js";
+import { ObjectDetectionView } from "./ObjectDetectionView.js";
+import { PoseEstimationView } from "./PoseEstimationView.js";
 import { useRLBackend } from "../hooks/useRLBackend.js";
+import { getVisionBackendClient } from "../utils/visionBackendClient.js";
 import { exportStateToJSON } from "../utils/exportUtils.js";
 import { logger, LogLevel } from "../utils/logger.js";
 import { configManager } from "../utils/config.js";
@@ -65,13 +71,12 @@ import type {
   NebulaCloud,
 } from "../types/index.js";
 import { PROTO_DEFINITION, MAX_LOGS, MAX_GRAPH_POINTS } from "../constants/proto.js";
-import { Rocket, BrainCircuit, Settings, Activity, Mic, Download } from "lucide-react";
 
 const App = () => {
   const [isSimRunning, setIsSimRunning] = useState(false);
   const [isTraining, setIsTraining] = useState(false);
   const [useMic, setUseMic] = useState(true);
-  const [activeTab, setActiveTab] = useState<"services" | "proto" | "intelligence" | "augmentation" | "multiagent" | "rlbackend">("services");
+  const [activeTab, setActiveTab] = useState<"services" | "proto" | "intelligence" | "augmentation" | "multiagent" | "rlbackend" | "vision">("services");
   const [augmentedAudioData, setAugmentedAudioData] = useState<AudioData | null>(null);
   const [sceneData, setSceneData] = useState<{
     spaceship: { x: number; y: number; z: number; roll: number; rotation?: { x: number; y: number; z: number; w: number }; velocity?: { x: number; y: number; z: number } };
@@ -82,6 +87,39 @@ const App = () => {
   const [showDevTools, setShowDevTools] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showModelViewer, setShowModelViewer] = useState(false);
+  const [visionControlEnabled, setVisionControlEnabled] = useState(false);
+  const [visionConfig, setVisionConfig] = useState<VisionControlConfig>({
+    enabled: false,
+    scheme: "gesture",
+    sensitivity: 0.7,
+    smoothing: 0.3,
+    deadZone: 0.1,
+    gestureThreshold: 0.6,
+    maxHands: 1,
+    useBackend: false,
+    backendUrl: "ws://localhost:8766/ws/vision",
+    enableObjectDetection: false,
+    enablePoseEstimation: false,
+    frameRate: 30,
+    presetName: undefined,
+  });
+  const [currentControlSignal, setCurrentControlSignal] = useState<{
+    direction: { x: number; y: number };
+    thrust: number;
+    action: "IDLE" | "BOOST" | "STABILIZE" | "TURN_LEFT" | "TURN_RIGHT" | "EVADE";
+  } | null>(null);
+  const [gestureConfidence, setGestureConfidence] = useState<number>(0);
+  const [detectedObjects, setDetectedObjects] = useState<Array<{
+    class: string;
+    classId: number;
+    confidence: number;
+    boundingBox: { x: number; y: number; width: number; height: number };
+  }>>([]);
+  const [poseData, setPoseData] = useState<any>(null);
+  const [visionBackendConnected, setVisionBackendConnected] = useState(false);
+  const [visionBackendError, setVisionBackendError] = useState<string | null>(null);
+  const [currentGesture, setCurrentGesture] = useState<string | null>(null);
+  const [handsDetected, setHandsDetected] = useState(0);
   const { audioData, startAudio, stopAudio } = useAudioAnalyzer(isSimRunning, isTraining);
   const { metrics, startRenderMeasure, endRenderMeasure } = usePerformanceProfiler(isSimRunning);
 
@@ -169,6 +207,7 @@ const App = () => {
   const audioDataRef = useRef(audioData);
   const servicesRef = useRef(services);
   const isTrainingRef = useRef(isTraining);
+  const augmentedAudioDataRef = useRef<AudioData | null>(null);
 
   useEffect(() => {
     audioDataRef.current = audioData;
@@ -329,6 +368,9 @@ const App = () => {
       // Process all agents with different policies
       const activeNavServices = updatedServices.filter(s => s.name.startsWith("Nav-Agent") && s.status === "ACTIVE");
       
+      // 3. Simulate Traffic based on Audio Events & Service Status
+      const isNavActive = activeNavServices.length > 0;
+      
       if (activeNavServices.length > 0) {
         const noiseState = effectiveAudio.bass > 0.4 ? "HIGH_NOISE" : "LOW_NOISE";
         const timestamp = Date.now();
@@ -438,10 +480,6 @@ const App = () => {
         });
       }
 
-      // 3. Simulate Traffic based on Audio Events & Service Status
-
-      const isNavActive = activeNavServices.length > 0;
-
       // Bass Event -> Thrust boost
       const audioConfig = configManager.getSimulationConfig().audio;
       const bassThreshold = training ? audioConfig.bassThreshold.training : audioConfig.bassThreshold.normal;
@@ -459,6 +497,49 @@ const App = () => {
 
     return () => clearInterval(interval);
   }, [isSimRunning, addLog, rlMetrics]);
+
+  // Vision Backend Connection and Detection Handling
+  useEffect(() => {
+    if (!visionConfig.useBackend || !visionBackendConnected) {
+      return;
+    }
+
+    const client = getVisionBackendClient(visionConfig.backendUrl);
+    
+    // Handle detection results
+    const handleDetection = (message: any) => {
+      if (message.type === "detection") {
+        if (visionConfig.enableObjectDetection && message.objects) {
+          setDetectedObjects(message.objects);
+        }
+        if (visionConfig.enablePoseEstimation && message.pose) {
+          setPoseData(message.pose);
+        }
+        // Handle hand detection from backend if needed
+        if (message.hands && message.hands.length > 0) {
+          setHandsDetected(message.hands.length);
+          // Could update gesture from backend
+        }
+        // Apply control signal from backend
+        if (message.control && visionControlEnabled) {
+          setAgentMetrics((prev) => ({
+            ...prev,
+            action: message.control.action,
+            confidence: 0.9,
+          }));
+        }
+      }
+    };
+
+    client.on("detection", handleDetection);
+    client.on("error", (error) => {
+      setVisionBackendError(error.error || "Backend error");
+    });
+
+    return () => {
+      client.off("detection", handleDetection);
+    };
+  }, [visionConfig.useBackend, visionConfig.enableObjectDetection, visionConfig.enablePoseEstimation, visionBackendConnected, visionControlEnabled]);
 
   // Keyboard Shortcuts
   useKeyboardShortcuts({
@@ -712,6 +793,7 @@ const App = () => {
                 onSceneDataUpdate={setSceneData}
               />
             </ErrorBoundary>
+            </ErrorBoundary>
             <PerformanceProfiler metrics={metrics} isVisible={showPerformanceProfiler} />
 
             {/* Overlay Data */}
@@ -773,6 +855,12 @@ const App = () => {
               className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === "rlbackend" ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800" : "text-slate-500 hover:text-slate-300"}`}
             >
               <Network size={14} /> BACKEND
+            </button>
+            <button
+              onClick={() => setActiveTab("vision")}
+              className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === "vision" ? "text-green-400 border-b-2 border-green-400 bg-slate-800" : "text-slate-500 hover:text-slate-300"}`}
+            >
+              <Camera size={14} /> VISION
             </button>
           </div>
 
@@ -869,6 +957,101 @@ const App = () => {
                 url={rlBackendUrl}
                 onUrlChange={setRlBackendUrl}
               />
+            </div>
+          ) : activeTab === "vision" ? (
+            <div className="flex-1 flex flex-col min-h-0 border-b border-slate-800 overflow-y-auto">
+              <div className="p-4 border-b border-slate-800">
+                <div className="mb-4">
+                  <h2 className="text-sm font-bold text-slate-400 flex items-center gap-2 mb-2">
+                    <Camera size={14} /> Vision-Based Control
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Use hand gestures to control the rocket. Configure sensitivity and control scheme below.
+                  </p>
+                </div>
+              </div>
+
+              {/* Control Panel */}
+              <div className="p-4 border-b border-slate-800">
+                <VisionControlPanel
+                  config={visionConfig}
+                  onConfigChange={(newConfig) => {
+                    setVisionConfig(newConfig);
+                    setVisionControlEnabled(newConfig.enabled);
+                    
+                    // Connect/disconnect backend if needed
+                    if (newConfig.useBackend && !visionBackendConnected) {
+                      const client = getVisionBackendClient(newConfig.backendUrl);
+                      client.connect().then(() => {
+                        setVisionBackendConnected(true);
+                        setVisionBackendError(null);
+                      }).catch((err) => {
+                        setVisionBackendError(err.message);
+                        setVisionBackendConnected(false);
+                      });
+                    } else if (!newConfig.useBackend && visionBackendConnected) {
+                      const client = getVisionBackendClient();
+                      client.disconnect();
+                      setVisionBackendConnected(false);
+                    }
+                  }}
+                  isActive={visionControlEnabled && isSimRunning}
+                  handsDetected={handsDetected}
+                  currentGesture={currentGesture}
+                  backendConnected={visionBackendConnected}
+                  backendError={visionBackendError}
+                />
+              </div>
+
+              {/* Webcam Viewer */}
+              <div className="p-4">
+                <WebcamViewer
+                  enabled={visionControlEnabled && isSimRunning}
+                  detectionInterval={1000 / (visionConfig.frameRate || 30)}
+                  onControlUpdate={(control) => {
+                    // Store control signal for display
+                    setCurrentControlSignal(control);
+
+                    // Apply vision control based on scheme
+                    if (visionControlEnabled && visionConfig.enabled) {
+                      // Apply smoothing
+                      const smoothedDirection = {
+                        x: control.direction.x * visionConfig.sensitivity,
+                        y: control.direction.y * visionConfig.sensitivity,
+                      };
+
+                      // Apply dead zone
+                      if (
+                        Math.abs(smoothedDirection.x) < visionConfig.deadZone &&
+                        Math.abs(smoothedDirection.y) < visionConfig.deadZone
+                      ) {
+                        // In dead zone, don't update
+                        return;
+                      }
+
+                      // Override agent action with vision control
+                      if (control.action !== "IDLE") {
+                        setAgentMetrics((prev) => ({
+                          ...prev,
+                          action: control.action,
+                          confidence: 0.9,
+                        }));
+                      }
+                    }
+                  }}
+                  onHandsDetected={setHandsDetected}
+                  onGestureDetected={(gesture) => {
+                    if (gesture && typeof gesture === "object" && "type" in gesture) {
+                      setCurrentGesture(gesture.type);
+                      setGestureConfidence((gesture as any).confidence || 0);
+                    } else {
+                      setCurrentGesture(gesture);
+                      setGestureConfidence(0);
+                    }
+                  }}
+                  showOverlay={true}
+                />
+              </div>
             </div>
           ) : (
             <div className="p-0 border-b border-slate-800 h-[250px] flex flex-col">
