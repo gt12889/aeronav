@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package simulation;
+
+// Service for agents to receive commands
+service AgentService {
+  rpc ExecuteCommand (SimulationCommand) returns (CommandResponse);
+}
+
+// Service for the controller to receive audio events (if we use gRPC for this)
+service ControllerService {
+  rpc PublishAudioEvent (AudioEvent) returns (EventResponse);
+}
+
+message AudioEvent {
+  string event_type = 1; // e.g., "BEAT", "PITCH_CHANGE", "WAVEFORM"
+  float value = 2;       // Magnitude or specific value
+  double timestamp = 3;
+  map<string, string> metadata = 4;
+}
+
+message SimulationCommand {
+  string target_agent = 1; // e.g., "robot-arm", "lighting"
+  string action = 2;       // e.g., "MOVE", "CHANGE_COLOR"
+  map<string, string> parameters = 3;
+}
+
+message CommandResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message EventResponse {
+  bool success = 1;
+}

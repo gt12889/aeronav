@@ -1,0 +1,18 @@
+{
+  "simulation": {
+    "fps": {
+      "target": 60,
+      "training": 120
+    }
+  },
+  "logging": {
+    "minLevel": "DEBUG",
+    "enableConsole": true,
+    "enableStorage": true
+  },
+  "ui": {
+    "maxLogs": 100,
+    "maxGraphPoints": 50
+  }
+}
+

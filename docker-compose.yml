@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  audio-service:
+    build: ./audio-service
+    container_name: audio-service
+    environment:
+      - CONTROLLER_HOST=sim-controller
+      - CONTROLLER_PORT=50051
+    depends_on:
+      - sim-controller
+
+  sim-controller:
+    build: ./sim-controller
+    container_name: sim-controller
+    ports:
+      - "50051:50051"
+    environment:
+      - ROBOT_AGENT_HOST=robot-arm
+      - ROBOT_AGENT_PORT=50052
+      - LIGHTING_AGENT_HOST=lighting
+      - LIGHTING_AGENT_PORT=50053
+
+  robot-arm:
+    build: ./agents/robot-arm
+    container_name: robot-arm
+    ports:
+      - "50052:50052"
+
+  lighting:
+    build: ./agents/lighting
+    container_name: lighting
+    ports:
+      - "50053:50053"

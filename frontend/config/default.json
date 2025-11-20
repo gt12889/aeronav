@@ -1,0 +1,79 @@
+{
+  "simulation": {
+    "fps": {
+      "target": 60,
+      "training": 144
+    },
+    "audio": {
+      "fftSize": 512,
+      "bassThreshold": {
+        "normal": 0.6,
+        "training": 0.3
+      },
+      "useMicrophone": true
+    },
+    "rl": {
+      "epsilon": {
+        "normal": 0.05,
+        "training": 0.3
+      },
+      "learningRate": 0.1,
+      "energy": {
+        "max": 100,
+        "regen": 1.5,
+        "costs": {
+          "GLIDE": 0.5,
+          "BOOST": 5,
+          "STABILIZE": 3
+        }
+      }
+    },
+    "services": {
+      "updateInterval": 200,
+      "errorRate": 0.02,
+      "recoveryRate": 0.15,
+      "latencySpikeChance": 0.05
+    },
+    "visualization": {
+      "particles": {
+        "count": 50,
+        "types": {
+          "bit": 0.7,
+          "block": 0.3
+        }
+      },
+      "nebula": {
+        "count": 6,
+        "baseHue": {
+          "min": 200,
+          "max": 260
+        }
+      },
+      "grid": {
+        "scrollSpeed": {
+          "base": 2,
+          "multiplier": 3
+        }
+      }
+    }
+  },
+  "ui": {
+    "maxLogs": 50,
+    "maxGraphPoints": 30,
+    "performance": {
+      "updateInterval": 1000,
+      "frameHistorySize": 60
+    }
+  },
+  "logging": {
+    "minLevel": "INFO",
+    "enableConsole": true,
+    "enableStorage": true,
+    "maxStoredLogs": 1000
+  },
+  "export": {
+    "defaultFormat": "json",
+    "includeMetadata": true
+  }
+}
+
