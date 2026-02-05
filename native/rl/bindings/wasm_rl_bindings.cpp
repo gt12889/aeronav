@@ -66,3 +66,21 @@ EMSCRIPTEN_BINDINGS(aeronav_rl) {
         .field("agent1Id", &CoordinationEvent::agent1Id)
         .field("agent2Id", &CoordinationEvent::agent2Id)
         .field("type", &CoordinationEvent::type);
+
+    class_<MultiAgentSystem>("MultiAgentSystem")
+        .constructor<>()
+        .function("createAgent", &MultiAgentSystem::createAgent)
+        .function("removeAgent", &MultiAgentSystem::removeAgent)
+        .function("getAgentCount", &MultiAgentSystem::getAgentCount)
+        .function("selectAction", &MultiAgentSystem::selectAction)
+        .function("calculateReward", &MultiAgentSystem::calculateReward)
+        .function("updateQTable", &MultiAgentSystem::updateQTable)
+        .function("stepAll", &MultiAgentSystem::stepAll)
+        .function("detectCoordination", &MultiAgentSystem::detectCoordination)
+        .function("calculateCoordinationScore", &MultiAgentSystem::calculateCoordinationScore)
+        .function("getCoordinationEventCount", &MultiAgentSystem::getCoordinationEventCount)
+        .function("getCoordinationEvent", &MultiAgentSystem::getCoordinationEvent)
+        .function("clearCoordinationEvents", &MultiAgentSystem::clearCoordinationEvents)
+        .function("regenEnergy", &MultiAgentSystem::regenEnergy)
+        .function("consumeEnergy", &MultiAgentSystem::consumeEnergy);
+}
