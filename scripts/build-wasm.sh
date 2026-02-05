@@ -134,6 +134,13 @@ else
     echo -e "${YELLOW}⚠ Pathfinding module not found at $NATIVE_DIR/pathfinding${NC}"
 fi
 
+# Build DSP module
+if [[ -d "$NATIVE_DIR/dsp" ]]; then
+    build_module "dsp" "$NATIVE_DIR/dsp"
+else
+    echo -e "${YELLOW}⚠ DSP module not found at $NATIVE_DIR/dsp${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
