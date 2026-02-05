@@ -1,6 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AudioData, AgentMetrics, Particle, NebulaCloud } from "../types/index.js";
 import { SpaceshipPhysicsEngine, defaultSpaceshipConfig } from "../utils/physicsEngine.js";
+import {
+  loadWasmPhysics,
+  WasmSpaceshipPhysicsEngine,
+  isWasmPhysicsAvailable
+} from "../utils/wasmPhysicsEngine.js";
+
+// Physics engine type (either WASM or JS)
+type PhysicsEngine = SpaceshipPhysicsEngine | WasmSpaceshipPhysicsEngine;
 
 interface SimulationCanvasProps {
   data: AudioData;
@@ -26,9 +34,46 @@ export const SimulationCanvas = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const nebulaRef = useRef<NebulaCloud[]>([]);
+  const lastFrameTimeRef = useRef<number>(performance.now());
 
-  // Physics Engine
-  const physicsEngineRef = useRef<SpaceshipPhysicsEngine | null>(null);
+  // Physics Engine (WASM or JS fallback)
+  const physicsEngineRef = useRef<PhysicsEngine | null>(null);
+  const [physicsBackend, setPhysicsBackend] = useState<'wasm' | 'js' | 'loading'>('loading');
+
+  // Initialize physics engine (try WASM first, fallback to JS)
+  useEffect(() => {
+    let mounted = true;
+
+    const initPhysics = async () => {
+      try {
+        // Try to load WASM physics
+        await loadWasmPhysics();
+        if (!mounted) return;
+
+        physicsEngineRef.current = new WasmSpaceshipPhysicsEngine(defaultSpaceshipConfig);
+        setPhysicsBackend('wasm');
+        console.log('[SimulationCanvas] Using WASM physics engine');
+      } catch (error) {
+        // Fallback to JS/Cannon.js physics
+        if (!mounted) return;
+
+        physicsEngineRef.current = new SpaceshipPhysicsEngine(defaultSpaceshipConfig);
+        setPhysicsBackend('js');
+        console.log('[SimulationCanvas] Using JS/Cannon.js physics engine (WASM unavailable)');
+      }
+    };
+
+    initPhysics();
+
+    return () => {
+      mounted = false;
+      // Cleanup physics engine
+      if (physicsEngineRef.current) {
+        physicsEngineRef.current.dispose?.();
+        physicsEngineRef.current = null;
+      }
+    };
+  }, []);
   
   // Spaceship State (for backward compatibility and visual interpolation)
   const shipState = useRef({
@@ -304,8 +349,8 @@ export const SimulationCanvas = ({
 
       // Calculate delta time
       const currentTime = performance.now();
-      const deltaTime = (currentTime - lastFrameTime) / 1000; // Convert to seconds
-      lastFrameTime = currentTime;
+      const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000; // Convert to seconds
+      lastFrameTimeRef.current = currentTime;
 
       // Visual update based on Agent Action
       // If Agent says boost, we artificially increase speed animation
@@ -471,7 +516,8 @@ export const SimulationCanvas = ({
       ctx.fillText(`THRUST: ${Math.floor(visualThrust * 100)}%`, 20, h / 2);
       ctx.fillText(`VEL:    ${speedVal} m/s`, 20, h / 2 + 15);
       if (physics && ss.usePhysics) {
-        ctx.fillText(`PHYSICS: ON`, 20, h / 2 + 30);
+        const backendLabel = physicsBackend === 'wasm' ? 'WASM' : 'JS';
+        ctx.fillText(`PHYSICS: ${backendLabel}`, 20, h / 2 + 30);
       }
 
       // Right: Altitude/System
@@ -527,7 +573,7 @@ export const SimulationCanvas = ({
 
     render();
     return () => cancelAnimationFrame(animationId);
-  }, [data, isTraining, agentMetrics]);
+  }, [data, isTraining, agentMetrics, physicsBackend]);
 
   return <canvas ref={canvasRef} className="w-full h-full block" />;
 };

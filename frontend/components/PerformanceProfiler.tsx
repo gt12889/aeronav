@@ -64,6 +64,30 @@ export const PerformanceProfiler = ({ metrics, isVisible }: PerformanceProfilerP
           </div>
         )}
 
+        {/* Physics Step Time */}
+        {metrics.physicsStepTime !== undefined && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Cpu className="w-3 h-3" />
+              <span>Physics</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-emerald-400 font-bold">
+                {metrics.physicsStepTime.toFixed(3)}ms
+              </span>
+              {metrics.physicsBackend && (
+                <span className={`text-[9px] px-1 rounded ${
+                  metrics.physicsBackend === 'wasm' ? 'bg-emerald-900 text-emerald-300' :
+                  metrics.physicsBackend === 'js' ? 'bg-amber-900 text-amber-300' :
+                  'bg-slate-700 text-slate-400'
+                }`}>
+                  {metrics.physicsBackend.toUpperCase()}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Audio Processing Time */}
         {metrics.audioProcessingTime !== undefined && (
           <div className="flex items-center justify-between">
@@ -71,9 +95,20 @@ export const PerformanceProfiler = ({ metrics, isVisible }: PerformanceProfilerP
               <Activity className="w-3 h-3" />
               <span>Audio</span>
             </div>
-            <span className="text-purple-400 font-bold">
-              {metrics.audioProcessingTime.toFixed(2)}ms
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-purple-400 font-bold">
+                {metrics.audioProcessingTime.toFixed(3)}ms
+              </span>
+              {metrics.audioBackend && (
+                <span className={`text-[9px] px-1 rounded ${
+                  metrics.audioBackend === 'wasm' ? 'bg-emerald-900 text-emerald-300' :
+                  metrics.audioBackend === 'js' ? 'bg-amber-900 text-amber-300' :
+                  'bg-slate-700 text-slate-400'
+                }`}>
+                  {metrics.audioBackend.toUpperCase()}
+                </span>
+              )}
+            </div>
           </div>
         )}
 
