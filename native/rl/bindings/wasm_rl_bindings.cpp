@@ -26,3 +26,26 @@ EMSCRIPTEN_BINDINGS(aeronav_rl) {
         .value("COOPERATION", CoordinationType::COOPERATION)
         .value("CONFLICT", CoordinationType::CONFLICT)
         .value("INDEPENDENCE", CoordinationType::INDEPENDENCE);
+
+    value_object<QValues>("QValues")
+        .field("glide", &QValues::glide)
+        .field("boost", &QValues::boost)
+        .field("stabilize", &QValues::stabilize);
+
+    value_object<QTable>("QTable")
+        .field("lowNoise", &QTable::lowNoise)
+        .field("highNoise", &QTable::highNoise);
+
+    value_object<EnergyConfig>("EnergyConfig")
+        .field("max", &EnergyConfig::max)
+        .field("regen", &EnergyConfig::regen)
+        .field("costGlide", &EnergyConfig::costGlide)
+        .field("costBoost", &EnergyConfig::costBoost)
+        .field("costStabilize", &EnergyConfig::costStabilize);
+
+    value_object<AgentConfig>("AgentConfig")
+        .field("policy", &AgentConfig::policy)
+        .field("epsilonNormal", &AgentConfig::epsilonNormal)
+        .field("epsilonTraining", &AgentConfig::epsilonTraining)
+        .field("learningRate", &AgentConfig::learningRate)
+        .field("energy", &AgentConfig::energy);
