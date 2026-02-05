@@ -52,3 +52,43 @@ AudioData AudioAugmenter::applyTimeWarp(const AudioData& data, const AudioData& 
         clamp01(prev.volume + (data.volume - prev.volume) * factor)
     };
 }
+
+AudioData AudioAugmenter::applyGain(const AudioData& data, float multiplier) {
+    if (multiplier == 1.0f) return data;
+    return {
+        clamp01(data.bass * multiplier),
+        clamp01(data.mid * multiplier),
+        clamp01(data.treble * multiplier),
+        clamp01(data.volume * multiplier)
+    };
+}
+
+AudioData AudioAugmenter::applyFilter(const AudioData& data, FilterType type, float cutoff) {
+    AudioData result = data;
+    const float bassCutoff = 200.0f, midCutoff = 2000.0f;
+    if (type == FilterType::LOWPASS) {
+        if (cutoff < midCutoff) { result.mid *= 0.5f; result.treble *= 0.2f; }
+        if (cutoff < bassCutoff) result.bass *= 0.5f;
+    } else if (type == FilterType::HIGHPASS) {
+        if (cutoff > bassCutoff) result.bass *= 0.5f;
+        if (cutoff > midCutoff) { result.mid *= 0.5f; result.bass *= 0.2f; }
+    } else { // BANDPASS
+        float bw = cutoff * 0.5f;
+        if (cutoff - bw > bassCutoff) result.bass *= 0.3f;
+        if (cutoff + bw < midCutoff) result.mid *= 0.3f;
+        if (cutoff - bw > midCutoff) result.treble *= 0.3f;
+    }
+    return result;
+}
+
+AudioData AudioAugmenter::applyAll(const AudioData& data, const AugmentationConfig& cfg, const AudioData* prev) {
+    AudioData result = data;
+    if (cfg.noiseEnabled) result = applyNoise(result, cfg.noiseIntensity, cfg.noiseType);
+    if (cfg.freqShiftEnabled) result = applyFreqShift(result, cfg.freqShiftAmount, cfg.freqShiftDir);
+    if (cfg.gainEnabled) result = applyGain(result, cfg.gainMultiplier);
+    if (cfg.filterEnabled) result = applyFilter(result, cfg.filterType, cfg.filterCutoff);
+    if (cfg.timeWarpEnabled && prev) result = applyTimeWarp(result, *prev, cfg.timeWarpFactor);
+    return result;
+}
+
+} // namespace aeronav
