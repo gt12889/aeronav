@@ -141,3 +141,28 @@ float MultiAgentSystem::calculateReward(uint32_t agentId, NoiseState noiseState,
 
     return std::max(-1.0f, std::min(1.0f, reward));
 }
+
+void MultiAgentSystem::updateQTable(uint32_t agentId, NoiseState noiseState, ThrustAction action, float reward) {
+    size_t idx = 0;
+    for (; idx < agents_.size(); idx++) {
+        if (agents_[idx].id == agentId) break;
+    }
+    if (idx >= agents_.size()) return;
+
+    AgentMetrics& agent = agents_[idx];
+    const AgentConfig& config = configs_[idx];
+    QValues& qv = (noiseState == NoiseState::LOW_NOISE) ? agent.qTable.lowNoise : agent.qTable.highNoise;
+
+    float* qPtr = nullptr;
+    switch (action) {
+        case ThrustAction::GLIDE: qPtr = &qv.glide; break;
+        case ThrustAction::BOOST: qPtr = &qv.boost; break;
+        case ThrustAction::STABILIZE: qPtr = &qv.stabilize; break;
+        default: return;
+    }
+
+    float currentQ = *qPtr;
+    float newQ = currentQ + config.learningRate * (reward - currentQ);
+    *qPtr = std::max(0.0f, std::min(1.0f, newQ));
+    agent.totalSteps++;
+}
