@@ -104,3 +104,40 @@ ThrustAction MultiAgentSystem::selectAction(uint32_t agentId, NoiseState noiseSt
     if (qv.boost >= qv.stabilize) return ThrustAction::BOOST;
     return ThrustAction::STABILIZE;
 }
+
+float MultiAgentSystem::calculateReward(uint32_t agentId, NoiseState noiseState, ThrustAction action, float energyLevel) {
+    size_t idx = 0;
+    for (; idx < agents_.size(); idx++) {
+        if (agents_[idx].id == agentId) break;
+    }
+    if (idx >= agents_.size()) return 0.0f;
+
+    const AgentConfig& config = configs_[idx];
+    float reward = 0.0f;
+
+    // Base reward logic
+    if (noiseState == NoiseState::HIGH_NOISE) {
+        if (action == ThrustAction::STABILIZE) reward = 0.9f;
+        else if (action == ThrustAction::BOOST) reward = 0.3f;
+        else reward = 0.1f;
+    } else {
+        if (action == ThrustAction::BOOST) reward = 0.8f;
+        else if (action == ThrustAction::GLIDE) reward = 0.7f;
+        else reward = 0.2f;
+    }
+
+    // Policy adjustments
+    if (config.policy == AgentPolicy::CONSERVATIVE) {
+        if (action == ThrustAction::BOOST) reward -= 0.2f;
+        if (energyLevel > 70.0f) reward += 0.1f;
+    } else if (config.policy == AgentPolicy::AGGRESSIVE) {
+        if (action == ThrustAction::BOOST) reward += 0.1f;
+        if (energyLevel < 20.0f) reward -= 0.2f;
+    }
+
+    // Energy penalty
+    if (energyLevel < 20.0f) reward -= 0.5f;
+    if (energyLevel > 80.0f) reward += 0.1f;
+
+    return std::max(-1.0f, std::min(1.0f, reward));
+}
