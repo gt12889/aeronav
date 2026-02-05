@@ -141,6 +141,13 @@ else
     echo -e "${YELLOW}⚠ DSP module not found at $NATIVE_DIR/dsp${NC}"
 fi
 
+# Build spatial module
+if [[ -d "$NATIVE_DIR/spatial" ]]; then
+    build_module "spatial" "$NATIVE_DIR/spatial"
+else
+    echo -e "${YELLOW}⚠ Spatial module not found at $NATIVE_DIR/spatial${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
