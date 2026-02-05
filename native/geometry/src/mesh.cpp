@@ -94,3 +94,21 @@ Mesh OBJParser::parse(const std::string& content) {
     mesh.texcoords = tempTexcoords;
     return mesh;
 }
+
+std::string OBJParser::serialize(const Mesh& mesh) {
+    std::ostringstream out;
+    out << "# Exported by Aeronav\n";
+    for (const auto& v : mesh.vertices)
+        out << "v " << v.x << " " << v.y << " " << v.z << "\n";
+    for (const auto& n : mesh.normals)
+        out << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+    for (const auto& t : mesh.texcoords)
+        out << "vt " << t.u << " " << t.v << "\n";
+    for (const auto& f : mesh.faces)
+        out << "f " << f.v[0]+1 << "/" << f.t[0]+1 << "/" << f.n[0]+1
+            << " " << f.v[1]+1 << "/" << f.t[1]+1 << "/" << f.n[1]+1
+            << " " << f.v[2]+1 << "/" << f.t[2]+1 << "/" << f.n[2]+1 << "\n";
+    return out.str();
+}
+
+} // namespace aeronav
