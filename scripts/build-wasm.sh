@@ -106,6 +106,13 @@ else
     echo -e "${YELLOW}⚠ RL module not found at $NATIVE_DIR/rl${NC}"
 fi
 
+# Build geometry module
+if [[ -d "$NATIVE_DIR/geometry" ]]; then
+    build_module "geometry" "$NATIVE_DIR/geometry"
+else
+    echo -e "${YELLOW}⚠ Geometry module not found at $NATIVE_DIR/geometry${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
