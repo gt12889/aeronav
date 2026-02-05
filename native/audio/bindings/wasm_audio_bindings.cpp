@@ -1,6 +1,7 @@
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 #include "../src/audio_fft.hpp"
+#include "../src/audio_augmentation.hpp"
 
 using namespace emscripten;
 using namespace aeronav;
@@ -106,4 +107,33 @@ EMSCRIPTEN_BINDINGS(aeronav_audio) {
 
     // Bind standalone function for quick analysis
     function("analyzeFrequencies", &analyzeFrequenciesQuick);
+
+    // Augmentation enums
+    enum_<NoiseType>("NoiseType")
+        .value("WHITE", NoiseType::WHITE)
+        .value("PINK", NoiseType::PINK)
+        .value("BROWN", NoiseType::BROWN);
+
+    enum_<FilterType>("FilterType")
+        .value("LOWPASS", FilterType::LOWPASS)
+        .value("HIGHPASS", FilterType::HIGHPASS)
+        .value("BANDPASS", FilterType::BANDPASS);
+
+    enum_<ShiftDirection>("ShiftDirection")
+        .value("UP", ShiftDirection::UP)
+        .value("DOWN", ShiftDirection::DOWN)
+        .value("BOTH", ShiftDirection::BOTH);
+
+    value_object<AudioData>("AudioData")
+        .field("bass", &AudioData::bass)
+        .field("mid", &AudioData::mid)
+        .field("treble", &AudioData::treble)
+        .field("volume", &AudioData::volume);
+
+    class_<AudioAugmenter>("AudioAugmenter")
+        .constructor<>()
+        .function("applyNoise", &AudioAugmenter::applyNoise)
+        .function("applyFreqShift", &AudioAugmenter::applyFreqShift)
+        .function("applyGain", &AudioAugmenter::applyGain)
+        .function("applyFilter", &AudioAugmenter::applyFilter);
 }
