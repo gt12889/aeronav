@@ -53,3 +53,44 @@ void Mesh::computeNormals() {
         if (len > 0) { n.x /= len; n.y /= len; n.z /= len; }
     }
 }
+
+Mesh OBJParser::parse(const std::string& content) {
+    Mesh mesh;
+    std::istringstream stream(content);
+    std::string line;
+    std::vector<Vec3> tempNormals;
+    std::vector<Vec2> tempTexcoords;
+
+    while (std::getline(stream, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream ls(line);
+        std::string cmd;
+        ls >> cmd;
+
+        if (cmd == "v") {
+            Vec3 v; ls >> v.x >> v.y >> v.z;
+            mesh.vertices.push_back(v);
+        } else if (cmd == "vn") {
+            Vec3 n; ls >> n.x >> n.y >> n.z;
+            tempNormals.push_back(n);
+        } else if (cmd == "vt") {
+            Vec2 t; ls >> t.u >> t.v;
+            tempTexcoords.push_back(t);
+        } else if (cmd == "f") {
+            Face face = {{0,0,0}, {0,0,0}, {0,0,0}};
+            for (int i = 0; i < 3; i++) {
+                std::string token; ls >> token;
+                size_t p1 = token.find('/'), p2 = token.find('/', p1 + 1);
+                face.v[i] = std::stoul(token.substr(0, p1)) - 1;
+                if (p1 != std::string::npos && p2 != p1 + 1)
+                    face.t[i] = std::stoul(token.substr(p1 + 1, p2 - p1 - 1)) - 1;
+                if (p2 != std::string::npos)
+                    face.n[i] = std::stoul(token.substr(p2 + 1)) - 1;
+            }
+            mesh.faces.push_back(face);
+        }
+    }
+    mesh.normals = tempNormals;
+    mesh.texcoords = tempTexcoords;
+    return mesh;
+}
