@@ -1,0 +1,94 @@
+#include "audio_augmentation.hpp"
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+
+namespace aeronav {
+
+AudioAugmenter::AudioAugmenter()
+    : b0_(0), b1_(0), b2_(0), b3_(0), b4_(0), b5_(0), b6_(0), brownLast_(0) {
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+}
+
+float AudioAugmenter::randomFloat() {
+    return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+}
+
+static float clamp01(float v) { return std::max(0.0f, std::min(1.0f, v)); }
+
+AudioData AudioAugmenter::applyNoise(const AudioData& data, float intensity, NoiseType type) {
+    float mult = 1.0f;
+    if (type == NoiseType::PINK) mult = 0.8f;
+    else if (type == NoiseType::BROWN) mult = 0.6f;
+    float noise = intensity * mult;
+    return {
+        clamp01(data.bass + (randomFloat() - 0.5f) * noise),
+        clamp01(data.mid + (randomFloat() - 0.5f) * noise),
+        clamp01(data.treble + (randomFloat() - 0.5f) * noise),
+        clamp01(data.volume + (randomFloat() - 0.5f) * noise)
+    };
+}
+
+AudioData AudioAugmenter::applyFreqShift(const AudioData& data, float amount, ShiftDirection dir) {
+    float shift = amount / 1000.0f;
+    float shiftAmt = shift;
+    if (dir == ShiftDirection::DOWN) shiftAmt = -shift;
+    else if (dir == ShiftDirection::BOTH) shiftAmt = (randomFloat() > 0.5f ? 1.0f : -1.0f) * shift;
+    float energyShift = std::abs(shiftAmt) * 0.1f;
+    return {
+        clamp01(data.bass + (shiftAmt < 0 ? energyShift : -energyShift)),
+        clamp01(data.mid + shiftAmt * energyShift),
+        clamp01(data.treble + (shiftAmt > 0 ? energyShift : -energyShift)),
+        data.volume
+    };
+}
+
+AudioData AudioAugmenter::applyTimeWarp(const AudioData& data, const AudioData& prev, float factor) {
+    if (factor == 1.0f) return data;
+    return {
+        clamp01(prev.bass + (data.bass - prev.bass) * factor),
+        clamp01(prev.mid + (data.mid - prev.mid) * factor),
+        clamp01(prev.treble + (data.treble - prev.treble) * factor),
+        clamp01(prev.volume + (data.volume - prev.volume) * factor)
+    };
+}
+
+AudioData AudioAugmenter::applyGain(const AudioData& data, float multiplier) {
+    if (multiplier == 1.0f) return data;
+    return {
+        clamp01(data.bass * multiplier),
+        clamp01(data.mid * multiplier),
+        clamp01(data.treble * multiplier),
+        clamp01(data.volume * multiplier)
+    };
+}
+
+AudioData AudioAugmenter::applyFilter(const AudioData& data, FilterType type, float cutoff) {
+    AudioData result = data;
+    const float bassCutoff = 200.0f, midCutoff = 2000.0f;
+    if (type == FilterType::LOWPASS) {
+        if (cutoff < midCutoff) { result.mid *= 0.5f; result.treble *= 0.2f; }
+        if (cutoff < bassCutoff) result.bass *= 0.5f;
+    } else if (type == FilterType::HIGHPASS) {
+        if (cutoff > bassCutoff) result.bass *= 0.5f;
+        if (cutoff > midCutoff) { result.mid *= 0.5f; result.bass *= 0.2f; }
+    } else { // BANDPASS
+        float bw = cutoff * 0.5f;
+        if (cutoff - bw > bassCutoff) result.bass *= 0.3f;
+        if (cutoff + bw < midCutoff) result.mid *= 0.3f;
+        if (cutoff - bw > midCutoff) result.treble *= 0.3f;
+    }
+    return result;
+}
+
+AudioData AudioAugmenter::applyAll(const AudioData& data, const AugmentationConfig& cfg, const AudioData* prev) {
+    AudioData result = data;
+    if (cfg.noiseEnabled) result = applyNoise(result, cfg.noiseIntensity, cfg.noiseType);
+    if (cfg.freqShiftEnabled) result = applyFreqShift(result, cfg.freqShiftAmount, cfg.freqShiftDir);
+    if (cfg.gainEnabled) result = applyGain(result, cfg.gainMultiplier);
+    if (cfg.filterEnabled) result = applyFilter(result, cfg.filterType, cfg.filterCutoff);
+    if (cfg.timeWarpEnabled && prev) result = applyTimeWarp(result, *prev, cfg.timeWarpFactor);
+    return result;
+}
+
+} // namespace aeronav

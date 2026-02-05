@@ -7,11 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Source files
 set(AUDIO_SOURCES
     src/audio_fft.cpp
+    src/audio_augmentation.cpp
     bindings/wasm_audio_bindings.cpp
 )
 
 set(AUDIO_HEADERS
     src/audio_fft.hpp
+    src/audio_augmentation.hpp
 )
 
 # Emscripten-specific configuration
