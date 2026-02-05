@@ -166,3 +166,35 @@ void MultiAgentSystem::updateQTable(uint32_t agentId, NoiseState noiseState, Thr
     *qPtr = std::max(0.0f, std::min(1.0f, newQ));
     agent.totalSteps++;
 }
+
+void MultiAgentSystem::regenEnergy(uint32_t agentId, float deltaTime) {
+    size_t idx = 0;
+    for (; idx < agents_.size(); idx++) {
+        if (agents_[idx].id == agentId) break;
+    }
+    if (idx >= agents_.size()) return;
+
+    AgentMetrics& agent = agents_[idx];
+    const AgentConfig& config = configs_[idx];
+    agent.energy = std::min(config.energy.max, agent.energy + config.energy.regen * deltaTime);
+}
+
+void MultiAgentSystem::consumeEnergy(uint32_t agentId, ThrustAction action) {
+    size_t idx = 0;
+    for (; idx < agents_.size(); idx++) {
+        if (agents_[idx].id == agentId) break;
+    }
+    if (idx >= agents_.size()) return;
+
+    AgentMetrics& agent = agents_[idx];
+    const EnergyConfig& ec = configs_[idx].energy;
+
+    float cost = 0.0f;
+    switch (action) {
+        case ThrustAction::GLIDE: cost = ec.costGlide; break;
+        case ThrustAction::BOOST: cost = ec.costBoost; break;
+        case ThrustAction::STABILIZE: cost = ec.costStabilize; break;
+        default: break;
+    }
+    agent.energy = std::max(0.0f, agent.energy - cost);
+}
