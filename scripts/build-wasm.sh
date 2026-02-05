@@ -120,6 +120,13 @@ else
     echo -e "${YELLOW}⚠ Math module not found at $NATIVE_DIR/math${NC}"
 fi
 
+# Build collision module
+if [[ -d "$NATIVE_DIR/collision" ]]; then
+    build_module "collision" "$NATIVE_DIR/collision"
+else
+    echo -e "${YELLOW}⚠ Collision module not found at $NATIVE_DIR/collision${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
