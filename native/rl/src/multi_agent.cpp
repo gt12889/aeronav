@@ -76,3 +76,31 @@ QTable MultiAgentSystem::initializeQTable(AgentPolicy policy) {
     }
     return qt;
 }
+
+ThrustAction MultiAgentSystem::selectAction(uint32_t agentId, NoiseState noiseState, bool isTraining) {
+    size_t idx = 0;
+    for (; idx < agents_.size(); idx++) {
+        if (agents_[idx].id == agentId) break;
+    }
+    if (idx >= agents_.size()) return ThrustAction::IDLE;
+
+    AgentMetrics& agent = agents_[idx];
+    const AgentConfig& config = configs_[idx];
+    float epsilon = isTraining ? config.epsilonTraining : config.epsilonNormal;
+    const QValues& qv = (noiseState == NoiseState::LOW_NOISE) ? agent.qTable.lowNoise : agent.qTable.highNoise;
+
+    // Epsilon-greedy exploration
+    if (randomFloat() < epsilon) {
+        if (config.policy == AgentPolicy::CONSERVATIVE) {
+            return (randomInt(2) == 0) ? ThrustAction::GLIDE : ThrustAction::STABILIZE;
+        } else if (config.policy == AgentPolicy::AGGRESSIVE) {
+            return (randomInt(2) == 0) ? ThrustAction::BOOST : ThrustAction::STABILIZE;
+        }
+        return static_cast<ThrustAction>(randomInt(3) + 1); // GLIDE, BOOST, or STABILIZE
+    }
+
+    // Exploitation: pick best Q-value
+    if (qv.glide >= qv.boost && qv.glide >= qv.stabilize) return ThrustAction::GLIDE;
+    if (qv.boost >= qv.stabilize) return ThrustAction::BOOST;
+    return ThrustAction::STABILIZE;
+}
