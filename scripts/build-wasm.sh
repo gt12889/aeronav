@@ -99,6 +99,13 @@ else
     echo -e "${YELLOW}⚠ Audio module not found at $NATIVE_DIR/audio${NC}"
 fi
 
+# Build RL module
+if [[ -d "$NATIVE_DIR/rl" ]]; then
+    build_module "multi_agent" "$NATIVE_DIR/rl"
+else
+    echo -e "${YELLOW}⚠ RL module not found at $NATIVE_DIR/rl${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
