@@ -49,3 +49,20 @@ EMSCRIPTEN_BINDINGS(aeronav_rl) {
         .field("epsilonTraining", &AgentConfig::epsilonTraining)
         .field("learningRate", &AgentConfig::learningRate)
         .field("energy", &AgentConfig::energy);
+
+    value_object<AgentMetrics>("AgentMetrics")
+        .field("id", &AgentMetrics::id)
+        .field("policy", &AgentMetrics::policy)
+        .field("action", &AgentMetrics::action)
+        .field("confidence", &AgentMetrics::confidence)
+        .field("reward", &AgentMetrics::reward)
+        .field("energy", &AgentMetrics::energy)
+        .field("qTable", &AgentMetrics::qTable)
+        .field("totalSteps", &AgentMetrics::totalSteps)
+        .field("coordinationScore", &AgentMetrics::coordinationScore);
+
+    value_object<CoordinationEvent>("CoordinationEvent")
+        .field("timestamp", &CoordinationEvent::timestamp)
+        .field("agent1Id", &CoordinationEvent::agent1Id)
+        .field("agent2Id", &CoordinationEvent::agent2Id)
+        .field("type", &CoordinationEvent::type);
