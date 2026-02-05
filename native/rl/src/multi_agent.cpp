@@ -226,3 +226,39 @@ void MultiAgentSystem::detectCoordination(uint32_t timestamp) {
         recentEvents_.erase(recentEvents_.begin(), recentEvents_.begin() + (recentEvents_.size() - 100));
     }
 }
+
+float MultiAgentSystem::calculateCoordinationScore(uint32_t agentId) {
+    int cooperation = 0, conflict = 0;
+    for (const auto& e : recentEvents_) {
+        if (e.agent1Id == agentId || e.agent2Id == agentId) {
+            if (e.type == CoordinationType::COOPERATION) cooperation++;
+            else if (e.type == CoordinationType::CONFLICT) conflict++;
+        }
+    }
+    int total = cooperation + conflict;
+    if (total == 0) return 0.5f;
+    return static_cast<float>(cooperation) / static_cast<float>(total);
+}
+
+CoordinationEvent MultiAgentSystem::getCoordinationEvent(size_t index) const {
+    if (index < recentEvents_.size()) return recentEvents_[index];
+    return {0, 0, 0, CoordinationType::INDEPENDENCE};
+}
+
+void MultiAgentSystem::clearCoordinationEvents() {
+    recentEvents_.clear();
+}
+
+void MultiAgentSystem::stepAll(NoiseState noiseState, bool isTraining) {
+    for (auto& agent : agents_) {
+        ThrustAction action = selectAction(agent.id, noiseState, isTraining);
+        float reward = calculateReward(agent.id, noiseState, action, agent.energy);
+        updateQTable(agent.id, noiseState, action, reward);
+        consumeEnergy(agent.id, action);
+        agent.action = action;
+        agent.reward = reward;
+        agent.confidence = std::max(agent.qTable.lowNoise.glide, std::max(agent.qTable.lowNoise.boost, agent.qTable.lowNoise.stabilize));
+    }
+}
+
+} // namespace aeronav
