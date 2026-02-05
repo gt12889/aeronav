@@ -6,7 +6,11 @@ export interface PerformanceMetrics {
   memoryUsage?: number; // MB (if available)
   renderTime: number; // milliseconds
   audioProcessingTime?: number; // milliseconds
+  physicsStepTime?: number; // milliseconds
   lastUpdate: number; // timestamp
+  // Backend info
+  physicsBackend?: 'wasm' | 'js' | 'loading';
+  audioBackend?: 'wasm' | 'js' | 'loading';
 }
 
 export const usePerformanceProfiler = (isActive: boolean) => {
@@ -16,7 +20,10 @@ export const usePerformanceProfiler = (isActive: boolean) => {
     memoryUsage: undefined,
     renderTime: 0,
     audioProcessingTime: undefined,
+    physicsStepTime: undefined,
     lastUpdate: Date.now(),
+    physicsBackend: 'loading',
+    audioBackend: 'loading',
   });
 
   const frameCountRef = useRef(0);
@@ -24,6 +31,9 @@ export const usePerformanceProfiler = (isActive: boolean) => {
   const frameTimesRef = useRef<number[]>([]);
   const renderStartRef = useRef<number>(0);
   const audioStartRef = useRef<number>(0);
+  const physicsStartRef = useRef<number>(0);
+  const physicsTimesRef = useRef<number[]>([]);
+  const audioTimesRef = useRef<number[]>([]);
 
   // Track FPS
   useEffect(() => {
@@ -34,7 +44,10 @@ export const usePerformanceProfiler = (isActive: boolean) => {
         memoryUsage: undefined,
         renderTime: 0,
         audioProcessingTime: undefined,
+        physicsStepTime: undefined,
         lastUpdate: Date.now(),
+        physicsBackend: 'loading',
+        audioBackend: 'loading',
       });
       return;
     }
@@ -119,12 +132,49 @@ export const usePerformanceProfiler = (isActive: boolean) => {
   const endAudioMeasure = () => {
     if (audioStartRef.current > 0) {
       const audioTime = performance.now() - audioStartRef.current;
+      audioTimesRef.current.push(audioTime);
+      // Keep rolling average of last 60 samples
+      if (audioTimesRef.current.length > 60) {
+        audioTimesRef.current = audioTimesRef.current.slice(-60);
+      }
+      const avgAudioTime = audioTimesRef.current.reduce((a, b) => a + b, 0) / audioTimesRef.current.length;
       setMetrics((prev) => ({
         ...prev,
-        audioProcessingTime: Math.round(audioTime * 100) / 100,
+        audioProcessingTime: Math.round(avgAudioTime * 1000) / 1000,
       }));
       audioStartRef.current = 0;
     }
+  };
+
+  // Track physics step time
+  const startPhysicsMeasure = () => {
+    physicsStartRef.current = performance.now();
+  };
+
+  const endPhysicsMeasure = () => {
+    if (physicsStartRef.current > 0) {
+      const physicsTime = performance.now() - physicsStartRef.current;
+      physicsTimesRef.current.push(physicsTime);
+      // Keep rolling average of last 60 samples
+      if (physicsTimesRef.current.length > 60) {
+        physicsTimesRef.current = physicsTimesRef.current.slice(-60);
+      }
+      const avgPhysicsTime = physicsTimesRef.current.reduce((a, b) => a + b, 0) / physicsTimesRef.current.length;
+      setMetrics((prev) => ({
+        ...prev,
+        physicsStepTime: Math.round(avgPhysicsTime * 1000) / 1000,
+      }));
+      physicsStartRef.current = 0;
+    }
+  };
+
+  // Set backend info
+  const setPhysicsBackend = (backend: 'wasm' | 'js' | 'loading') => {
+    setMetrics((prev) => ({ ...prev, physicsBackend: backend }));
+  };
+
+  const setAudioBackend = (backend: 'wasm' | 'js' | 'loading') => {
+    setMetrics((prev) => ({ ...prev, audioBackend: backend }));
   };
 
   return {
@@ -133,6 +183,10 @@ export const usePerformanceProfiler = (isActive: boolean) => {
     endRenderMeasure,
     startAudioMeasure,
     endAudioMeasure,
+    startPhysicsMeasure,
+    endPhysicsMeasure,
+    setPhysicsBackend,
+    setAudioBackend,
   };
 };
 

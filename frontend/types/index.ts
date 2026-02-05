@@ -91,6 +91,10 @@ export interface PerformanceMetrics {
   memoryUsage?: number; // MB (if available)
   renderTime: number; // milliseconds
   audioProcessingTime?: number; // milliseconds
+  physicsStepTime?: number; // milliseconds
   lastUpdate: number; // timestamp
+  // Backend info for WASM vs JS comparison
+  physicsBackend?: 'wasm' | 'js' | 'loading';
+  audioBackend?: 'wasm' | 'js' | 'loading';
 }
 
