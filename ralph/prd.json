@@ -1,0 +1,226 @@
+{
+  "project": "Aeronav",
+  "branchName": "ralph/wasm-physics-audio",
+  "description": "High-performance WebAssembly modules for physics engine and audio FFT processing - replacing Cannon.js with custom C++ physics solver and adding SIMD-accelerated audio analysis",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create native directory structure and CMake build system",
+      "description": "As a developer, I need the foundational build system for compiling C++ to WebAssembly using Emscripten.",
+      "acceptanceCriteria": [
+        "Create native/physics/ directory structure with src/ and bindings/ subdirectories",
+        "Create CMakeLists.txt with Emscripten toolchain configuration",
+        "CMake targets WASM output with -O3 optimization and SIMD flags",
+        "Build produces physics_engine.js and physics_engine.wasm files",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Implement SIMD-optimized Vector3 class",
+      "description": "As a developer, I need fast 3D vector math operations for physics calculations.",
+      "acceptanceCriteria": [
+        "Create vector3.hpp with Vector3 struct using aligned storage",
+        "Implement add, subtract, multiply, divide, dot, cross, normalize, length operations",
+        "Use SIMD intrinsics (__m128) when available with scalar fallback",
+        "Include operator overloads for intuitive usage (+, -, *, /)",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Implement Quaternion class for rotation math",
+      "description": "As a developer, I need quaternion operations for smooth 3D rotations without gimbal lock.",
+      "acceptanceCriteria": [
+        "Create quaternion.hpp with Quaternion struct (w, x, y, z components)",
+        "Implement multiply, conjugate, normalize, slerp operations",
+        "Implement fromAxisAngle, toEuler, rotateVector methods",
+        "Include identity quaternion constant",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Implement RigidBody class for spaceship dynamics",
+      "description": "As a developer, I need a rigid body representation to store and update spaceship physical state.",
+      "acceptanceCriteria": [
+        "Create rigid_body.hpp/cpp with RigidBody class",
+        "Store position, velocity, rotation (quat), angular velocity, mass",
+        "Store linearDamping, angularDamping, dragCoefficient properties",
+        "Implement applyForce, applyTorque, applyImpulse methods",
+        "Implement integrate method that updates position/rotation from velocities",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Implement 6DOF physics solver",
+      "description": "As a developer, I need the main physics engine that simulates spaceship flight with thrust and drag.",
+      "acceptanceCriteria": [
+        "Create physics_engine.hpp/cpp with PhysicsEngine class",
+        "Implement step(deltaTime) that advances simulation",
+        "Implement setTarget, applyThrust, applyBanking matching existing JS API",
+        "Support thrust actions: IDLE(0), GLIDE(0.3), BOOST(1.5), STABILIZE(0.5)",
+        "Apply drag force proportional to velocity squared",
+        "Clamp delta time to 0.1s to prevent instability",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Create Emscripten WASM bindings for physics engine",
+      "description": "As a developer, I need JavaScript-callable bindings to use the C++ physics engine from the browser.",
+      "acceptanceCriteria": [
+        "Create wasm_bindings.cpp using embind",
+        "Export PhysicsEngine class with all public methods",
+        "Export getState() returning position, velocity, rotation, angularVelocity",
+        "Export configuration setters for mass, damping, drag coefficient",
+        "Module exports work in ES module format",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Create TypeScript wrapper for WASM physics module",
+      "description": "As a developer, I need a TypeScript interface to load and use the WASM physics module seamlessly.",
+      "acceptanceCriteria": [
+        "Create frontend/utils/wasmPhysicsEngine.ts",
+        "Define PhysicsState interface matching existing physicsEngine.ts",
+        "Implement async loadWasmPhysics() that fetches and instantiates WASM",
+        "Create WasmPhysicsEngine class wrapping the WASM module",
+        "Match existing physicsEngine.ts API for drop-in replacement",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Integrate WASM physics into SimulationCanvas",
+      "description": "As a user, I want the simulation to use the faster WASM physics engine with JS fallback.",
+      "acceptanceCriteria": [
+        "Modify SimulationCanvas.tsx to try loading WASM physics first",
+        "Fall back to existing Cannon.js if WASM fails to load",
+        "Add useWasmPhysics config option (default true)",
+        "Log which physics engine is active on startup",
+        "Physics behavior unchanged from user perspective",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Create SIMD-accelerated FFT audio processor in C++",
+      "description": "As a developer, I need fast FFT frequency analysis for real-time audio reactivity.",
+      "acceptanceCriteria": [
+        "Create native/audio/src/audio_fft.hpp/cpp",
+        "Implement analyzeFrequencies(float* samples, int size) method",
+        "Calculate bass, mid, treble energy bands matching JS implementation",
+        "Use SIMD for parallel accumulation of frequency bin magnitudes",
+        "Output format matches existing AudioData interface",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Create WASM bindings for audio FFT module",
+      "description": "As a developer, I need JavaScript bindings to call the C++ audio processor from web workers.",
+      "acceptanceCriteria": [
+        "Create native/audio/bindings/wasm_audio_bindings.cpp",
+        "Export analyzeFrequencies function via embind",
+        "Accept Uint8Array or Float32Array for frequency data input",
+        "Return object with bass, mid, treble, volume properties",
+        "Build produces audio_fft.js and audio_fft.wasm",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Create TypeScript wrapper for WASM audio module",
+      "description": "As a developer, I need a TypeScript interface to use the WASM audio processor.",
+      "acceptanceCriteria": [
+        "Create frontend/utils/wasmAudioProcessor.ts",
+        "Implement async loadWasmAudio() function",
+        "Create analyzeFrequencies wrapper returning AudioData",
+        "Handle WASM loading errors gracefully",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Integrate WASM audio into audioProcessor worker",
+      "description": "As a user, I want faster audio analysis with WASM acceleration in the web worker.",
+      "acceptanceCriteria": [
+        "Modify audioProcessor.worker.ts to import WASM audio module",
+        "Use WASM analyzeFrequencies when available",
+        "Fall back to existing JS implementation if WASM unavailable",
+        "Maintain same message interface with main thread",
+        "Performance improvement measurable (log timing comparison)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Add WASM build script and documentation",
+      "description": "As a developer, I need a build script to compile all WASM modules easily.",
+      "acceptanceCriteria": [
+        "Create scripts/build-wasm.sh that builds physics and audio modules",
+        "Script checks for Emscripten installation",
+        "Script copies output .js and .wasm files to frontend/wasm/",
+        "Add WASM build instructions to project README or docs",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Add performance metrics for WASM vs JS comparison",
+      "description": "As a developer, I want to measure and display the performance difference between WASM and JS implementations.",
+      "acceptanceCriteria": [
+        "Add physicsStepTime metric to PerformanceProfiler",
+        "Add audioProcessTime metric to PerformanceProfiler",
+        "Display whether WASM or JS backend is active for each",
+        "Log average step times every 100 frames",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

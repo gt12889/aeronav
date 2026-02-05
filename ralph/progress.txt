@@ -1,0 +1,7 @@
+# Ralph Progress Log
+# Project: Aeronav WASM Physics & Audio
+# Branch: ralph/wasm-physics-audio
+# Started: 2026-02-05
+
+---
+
