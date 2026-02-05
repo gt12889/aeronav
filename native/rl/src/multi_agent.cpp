@@ -198,3 +198,31 @@ void MultiAgentSystem::consumeEnergy(uint32_t agentId, ThrustAction action) {
     }
     agent.energy = std::max(0.0f, agent.energy - cost);
 }
+
+void MultiAgentSystem::detectCoordination(uint32_t timestamp) {
+    for (size_t i = 0; i < agents_.size(); i++) {
+        for (size_t j = i + 1; j < agents_.size(); j++) {
+            const AgentMetrics& a1 = agents_[i];
+            const AgentMetrics& a2 = agents_[j];
+
+            // Conflict: opposite actions
+            if ((a1.action == ThrustAction::BOOST && a2.action == ThrustAction::STABILIZE) ||
+                (a1.action == ThrustAction::STABILIZE && a2.action == ThrustAction::BOOST)) {
+                recentEvents_.push_back({timestamp, a1.id, a2.id, CoordinationType::CONFLICT});
+            }
+            // Cooperation: same high-confidence action
+            else if (a1.action == a2.action && a1.action != ThrustAction::IDLE &&
+                     a1.confidence > 0.7f && a2.confidence > 0.7f) {
+                recentEvents_.push_back({timestamp, a1.id, a2.id, CoordinationType::COOPERATION});
+            }
+            // Independence: different compatible actions
+            else if (a1.action != a2.action && a1.action != ThrustAction::IDLE && a2.action != ThrustAction::IDLE) {
+                recentEvents_.push_back({timestamp, a1.id, a2.id, CoordinationType::INDEPENDENCE});
+            }
+        }
+    }
+    // Keep only last 100 events
+    if (recentEvents_.size() > 100) {
+        recentEvents_.erase(recentEvents_.begin(), recentEvents_.begin() + (recentEvents_.size() - 100));
+    }
+}
