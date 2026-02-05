@@ -127,6 +127,13 @@ else
     echo -e "${YELLOW}⚠ Collision module not found at $NATIVE_DIR/collision${NC}"
 fi
 
+# Build pathfinding module
+if [[ -d "$NATIVE_DIR/pathfinding" ]]; then
+    build_module "pathfinding" "$NATIVE_DIR/pathfinding"
+else
+    echo -e "${YELLOW}⚠ Pathfinding module not found at $NATIVE_DIR/pathfinding${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
