@@ -57,6 +57,23 @@ Mat4 Mat4::perspective(float fov, float aspect, float near, float far) {
     r.m[0] = f / aspect; r.m[5] = f; r.m[10] = (far + near) / (near - far);
     r.m[11] = -1.0f; r.m[14] = (2.0f * far * near) / (near - far); return r;
 }
+Mat4 Mat4::lookAt(float eyeX, float eyeY, float eyeZ, float atX, float atY, float atZ, float upX, float upY, float upZ) {
+    float fx = atX - eyeX, fy = atY - eyeY, fz = atZ - eyeZ;
+    float fLen = std::sqrt(fx*fx + fy*fy + fz*fz);
+    fx /= fLen; fy /= fLen; fz /= fLen;
+    float sx = fy * upZ - fz * upY, sy = fz * upX - fx * upZ, sz = fx * upY - fy * upX;
+    float sLen = std::sqrt(sx*sx + sy*sy + sz*sz);
+    sx /= sLen; sy /= sLen; sz /= sLen;
+    float ux = sy * fz - sz * fy, uy = sz * fx - sx * fz, uz = sx * fy - sy * fx;
+    Mat4 r = identity();
+    r.m[0] = sx; r.m[4] = sy; r.m[8] = sz;
+    r.m[1] = ux; r.m[5] = uy; r.m[9] = uz;
+    r.m[2] = -fx; r.m[6] = -fy; r.m[10] = -fz;
+    r.m[12] = -(sx*eyeX + sy*eyeY + sz*eyeZ);
+    r.m[13] = -(ux*eyeX + uy*eyeY + uz*eyeZ);
+    r.m[14] = fx*eyeX + fy*eyeY + fz*eyeZ;
+    return r;
+}
 Mat4 Mat4::operator*(const Mat4& o) const {
     Mat4 r; for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) {
         r.m[i * 4 + j] = 0;
@@ -106,3 +123,83 @@ float PerlinNoise::octave2D(float x, float y, int octaves, float persistence) co
     }
     return total / maxVal;
 }
+float PerlinNoise::octave1D(float x, int octaves, float persistence) const {
+    return octave2D(x, 0, octaves, persistence);
+}
+
+// Random
+Random::Random(uint32_t seed) : gen(seed), dist(0.0f, 1.0f) {}
+float Random::nextFloat() { return dist(gen); }
+float Random::range(float min, float max) { return min + dist(gen) * (max - min); }
+int Random::rangeInt(int min, int max) { return min + static_cast<int>(dist(gen) * (max - min + 1)); }
+float Random::gaussian(float mean, float stddev) {
+    std::normal_distribution<float> nd(mean, stddev);
+    return nd(gen);
+}
+
+// Color conversion
+RGB hslToRgb(float h, float s, float l) {
+    if (s == 0) return {l, l, l};
+    auto hue2rgb = [](float p, float q, float t) {
+        if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1.0f/6) return p + (q - p) * 6 * t;
+        if (t < 0.5f) return q;
+        if (t < 2.0f/3) return p + (q - p) * (2.0f/3 - t) * 6;
+        return p;
+    };
+    float q = l < 0.5f ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    return {hue2rgb(p, q, h + 1.0f/3), hue2rgb(p, q, h), hue2rgb(p, q, h - 1.0f/3)};
+}
+HSL rgbToHsl(float r, float g, float b) {
+    float mx = std::max({r, g, b}), mn = std::min({r, g, b}), d = mx - mn;
+    float l = (mx + mn) / 2, h = 0, s = 0;
+    if (d > 0) {
+        s = l > 0.5f ? d / (2 - mx - mn) : d / (mx + mn);
+        if (mx == r) h = (g - b) / d + (g < b ? 6 : 0);
+        else if (mx == g) h = (b - r) / d + 2;
+        else h = (r - g) / d + 4;
+        h /= 6;
+    }
+    return {h, s, l};
+}
+
+RGB hsvToRgb(float h, float s, float v) {
+    if (s == 0) return {v, v, v};
+    h = h * 6.0f;
+    int i = static_cast<int>(h);
+    float f = h - i;
+    float p = v * (1 - s);
+    float q = v * (1 - s * f);
+    float t = v * (1 - s * (1 - f));
+    switch (i % 6) {
+        case 0: return {v, t, p};
+        case 1: return {q, v, p};
+        case 2: return {p, v, t};
+        case 3: return {p, q, v};
+        case 4: return {t, p, v};
+        default: return {v, p, q};
+    }
+}
+
+HSV rgbToHsv(float r, float g, float b) {
+    float mx = std::max({r, g, b}), mn = std::min({r, g, b}), d = mx - mn;
+    float h = 0, s = (mx == 0) ? 0 : d / mx;
+    if (d > 0) {
+        if (mx == r) h = (g - b) / d + (g < b ? 6 : 0);
+        else if (mx == g) h = (b - r) / d + 2;
+        else h = (r - g) / d + 4;
+        h /= 6;
+    }
+    return {h, s, mx};
+}
+
+// Bezier
+float bezierQuadratic(float p0, float p1, float p2, float t) {
+    float t1 = 1 - t; return t1 * t1 * p0 + 2 * t1 * t * p1 + t * t * p2;
+}
+float bezierCubic(float p0, float p1, float p2, float p3, float t) {
+    float t1 = 1 - t; return t1*t1*t1*p0 + 3*t1*t1*t*p1 + 3*t1*t*t*p2 + t*t*t*p3;
+}
+
+} // namespace math
+} // namespace aeronav

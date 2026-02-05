@@ -113,6 +113,13 @@ else
     echo -e "${YELLOW}⚠ Geometry module not found at $NATIVE_DIR/geometry${NC}"
 fi
 
+# Build math module
+if [[ -d "$NATIVE_DIR/math" ]]; then
+    build_module "math_utils" "$NATIVE_DIR/math"
+else
+    echo -e "${YELLOW}⚠ Math module not found at $NATIVE_DIR/math${NC}"
+fi
+
 # Summary
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Build Complete${NC}"
